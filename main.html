@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orlando Police Department</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    header { font-size: 2em; font-weight: bold; margin-bottom: 20px; }
+    .rounded { border-radius: 10px; }
+    .button { padding: 10px 20px; border: none; cursor: pointer; }
+    .full-rounded { border-radius: 9999px; }
+    .green { background-color: #c8e6c9; }
+    .red { background-color: #ffcdd2; }
+    .blue { background-color: #bbdefb; }
+    .form-input { width: 100%; padding: 10px; margin-bottom: 10px; }
+    .hidden { display: none; }
+    .section { margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <header>Orlando Police Department</header>
+
+  <div id="loginSection">
+    <input type="text" id="username" class="form-input" placeholder="Username" />
+    <input type="password" id="password" class="form-input" placeholder="Password" />
+    <button class="button" onclick="login()">Login</button>
+  </div>
+
+  <div id="mainSection" class="hidden">
+    <button class="button" onclick="logout()">Logout</button>
+    <button class="button" onclick="toggleApplications()">View Application Responses</button>
+
+    <div id="applicationsView" class="hidden">
+      <button class="button full-rounded" onclick="showResponses()">New Application Responses</button>
+      <div id="responses"></div>
+      <div style="display: flex; gap: 20px; margin-top: 20px;">
+        <div class="green full-rounded" style="padding: 20px; text-align: center;">
+          <div>Accepted</div>
+          <div id="acceptedCount">0</div>
+        </div>
+        <div class="red full-rounded" style="padding: 20px; text-align: center;">
+          <div>Denied</div>
+          <div id="deniedCount">0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="blue full-rounded" style="padding: 20px;">
+      <h3>Orlando Police Department Cadet Application</h3>
+      <p>This department portal serves the city and protects the civilians.</p>
+    </div>
+    <form id="cadetForm">
+      <input class="form-input" name="discord" placeholder="Discord Username" />
+      <input class="form-input" name="roblox" placeholder="Roblox Username" />
+      <input class="form-input" name="age" placeholder="How old are you?" />
+      <input class="form-input" name="activity" placeholder="How active are you?" />
+      <input class="form-input" name="reason" placeholder="Why do you want to join?" />
+      <input class="form-input" name="10-8" placeholder="What is 10-8?" />
+      <input class="form-input" name="10-20" placeholder="What is 10-20?" />
+      <input class="form-input" name="10-41" placeholder="What is 10-41?" />
+      <input class="form-input" name="10-42" placeholder="What is 10-42?" />
+      <label><input type="checkbox" name="understand_accept" /> Do you understand that if you ask for your application to be accepted you will be denied?</label><br>
+      <label><input type="checkbox" name="understand_training" /> Do you understand that if you don't do your training you will be terminated?</label><br>
+      <button type="submit" class="button">Submit</button>
+    </form>
+  </div>
+
+  <div class="section">
+    <div class="blue full-rounded" style="padding: 20px;">
+      <h3>Orlando Police Department FTO Division</h3>
+      <p>This department portal serves the city and protects the civilians.</p>
+    </div>
+    <form id="ftoForm">
+      <input class="form-input" name="discord" placeholder="Discord Username" />
+      <input class="form-input" name="roblox" placeholder="Roblox Username" />
+      <input class="form-input" name="age" placeholder="How old are you?" />
+      <input class="form-input" name="activity" placeholder="How active are you?" />
+      <input class="form-input" name="reason" placeholder="Why do you want to join?" />
+      <input class="form-input" name="10-8" placeholder="What is 10-8?" />
+      <input class="form-input" name="10-20" placeholder="What is 10-20?" />
+      <input class="form-input" name="10-41" placeholder="What is 10-41?" />
+      <input class="form-input" name="10-42" placeholder="What is 10-42?" />
+      <label><input type="checkbox" name="understand_accept" /> Do you understand that if you ask for your application to be accepted you will be denied?</label><br>
+      <label><input type="checkbox" name="understand_training" /> Do you understand that if you don't do your training you will be terminated?</label><br>
+      <button type="submit" class="button">Submit</button>
+    </form>
+  </div>
+
+  <script>
+    let acceptedCount = 0;
+    let deniedCount = 0;
+    const applications = [];
+
+    function login() {
+      document.getElementById('loginSection').classList.add('hidden');
+      document.getElementById('mainSection').classList.remove('hidden');
+    }
+
+    function logout() {
+      document.getElementById('mainSection').classList.add('hidden');
+      document.getElementById('loginSection').classList.remove('hidden');
+    }
+
+    function toggleApplications() {
+      document.getElementById('applicationsView').classList.toggle('hidden');
+    }
+
+    function showResponses() {
+      const container = document.getElementById('responses');
+      container.innerHTML = '';
+      applications.forEach((app, i) => {
+        if (app.status === 'pending') {
+          const div = document.createElement('div');
+          div.innerHTML = `<pre>${JSON.stringify(app, null, 2)}</pre>` +
+            `<button onclick="accept(${i})">Accept</button>` +
+            `<button onclick="deny(${i})">Deny</button>`;
+          container.appendChild(div);
+        }
+      });
+    }
+
+    function accept(i) {
+      applications[i].status = 'accepted';
+      acceptedCount++;
+      document.getElementById('acceptedCount').innerText = acceptedCount;
+      showResponses();
+    }
+
+    function deny(i) {
+      applications[i].status = 'denied';
+      deniedCount++;
+      document.getElementById('deniedCount').innerText = deniedCount;
+      showResponses();
+    }
+
+    function handleFormSubmit(e, type) {
+      e.preventDefault();
+      const form = e.target;
+      const data = new FormData(form);
+      const entry = Object.fromEntries(data.entries());
+      entry.status = 'pending';
+      entry.type = type;
+      applications.push(entry);
+      form.reset();
+      alert('Application submitted!');
+    }
+
+    document.getElementById('cadetForm').addEventListener('submit', (e) => handleFormSubmit(e, 'Cadet'));
+    document.getElementById('ftoForm').addEventListener('submit', (e) => handleFormSubmit(e, 'FTO'));
+  </script>
+</body>
+</html>
