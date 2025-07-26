@@ -1,155 +1,1575 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Orlando Police Department</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    header { font-size: 2em; font-weight: bold; margin-bottom: 20px; }
-    .rounded { border-radius: 10px; }
-    .button { padding: 10px 20px; border: none; cursor: pointer; }
-    .full-rounded { border-radius: 9999px; }
-    .green { background-color: #c8e6c9; }
-    .red { background-color: #ffcdd2; }
-    .blue { background-color: #bbdefb; }
-    .form-input { width: 100%; padding: 10px; margin-bottom: 10px; }
-    .hidden { display: none; }
-    .section { margin-bottom: 20px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Broward County Dispatch Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* General Body Styles */
+        body {
+            font-family: 'Roboto Mono', monospace;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden; /* Prevent horizontal scroll */
+            font-size: 0.95em;
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .loading-spinner {
+            border: 8px solid #444;
+            border-top: 8px solid #007bff;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Login Container */
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #2b2b2b, #0e0e0e);
+        }
+
+        .login-box {
+            background-color: #2a2a2a;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            width: 350px;
+        }
+
+        .login-box h2 {
+            color: #007bff;
+            margin-bottom: 30px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2em;
+        }
+
+        .login-box .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .login-box label {
+            display: block;
+            margin-bottom: 8px;
+            color: #bbb;
+            font-weight: bold;
+        }
+
+        .login-box input[type="text"],
+        .login-box input[type="password"] {
+            width: calc(100% - 20px);
+            padding: 12px 10px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            background-color: #333;
+            color: #eee;
+            font-size: 1em;
+        }
+
+        .login-box input[type="text"]:focus,
+        .login-box input[type="password"]:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+        }
+
+        .login-box button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .login-box button:hover {
+            background-color: #0056b3;
+        }
+
+        .login-message {
+            color: #dc3545;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        /* Dashboard Container */
+        .dashboard-container {
+            display: none; /* Hidden by default, shown after login */
+            flex-direction: column;
+            flex-grow: 1;
+            opacity: 0; /* Start hidden for fade-in */
+            transition: opacity 1s ease-in-out; /* Fade-in effect */
+        }
+
+        .dashboard-container.fade-in {
+            opacity: 1; /* Fade in to full opacity */
+        }
+
+        /* Header */
+        header {
+            background-color: #222;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .top-left-logo img {
+            height: 40px; /* Adjust as needed for your logo */
+            filter: drop-shadow(0 0 5px rgba(0, 123, 255, 0.5)); /* Optional: add a glow */
+        }
+
+        .top-right-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .top-right-info .location-time,
+        .top-right-info .user-status {
+            color: #bbb;
+            font-size: 0.9em;
+        }
+
+        .top-right-info .user-status {
+            font-weight: bold;
+        }
+
+        .top-right-info button {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.3s ease;
+        }
+
+        .top-right-info button:hover {
+            background-color: #c82333;
+        }
+
+        /* Main Content Layout */
+        .main-content {
+            display: flex;
+            flex-grow: 1;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .left-panel, .center-panel, .right-panel {
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .left-panel {
+            flex: 2; /* Takes more space */
+        }
+
+        .center-panel {
+            flex: 1.5; /* Middle size */
+        }
+
+        .right-panel {
+            flex: 1; /* Smallest */
+        }
+
+        h3 {
+            color: #007bff;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.3em;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #bbb;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: calc(100% - 20px);
+            padding: 8px 10px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background-color: #333;
+            color: #eee;
+            font-size: 0.9em;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 60px;
+            max-height: 150px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.3s ease;
+            white-space: nowrap; /* Prevent button text from wrapping */
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
+        .clear-all-button {
+            background-color: #ffc107;
+            color: #333;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1em;
+            margin-top: auto; /* Pushes button to bottom of the panel */
+            transition: background-color 0.3s ease;
+        }
+
+        .clear-all-button:hover {
+            background-color: #e0a800;
+        }
+
+        /* Active Calls Table */
+        .active-calls-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 0.85em;
+        }
+
+        .active-calls-table th,
+        .active-calls-table td {
+            border: 1px solid #444;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .active-calls-table th {
+            background-color: #333;
+            color: #add8e6;
+            font-weight: bold;
+        }
+
+        .active-calls-table tbody tr {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .active-calls-table tbody tr:hover {
+            background-color: #3a3a3a;
+        }
+
+        .active-calls-table tbody tr.active-row {
+            background-color: #0056b3; /* Highlight selected row */
+            color: white;
+        }
+
+        /* Active Units List */
+        .active-units-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .unit-item {
+            background-color: #333;
+            border: 1px solid #555;
+            border-radius: 5px;
+            padding: 8px 12px;
+            font-size: 0.9em;
+            white-space: nowrap;
+        }
+
+        .unit-id {
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        /* Active BOLOs List */
+        .active-bolos-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 15px;
+            max-height: 300px; /* Example fixed height */
+            overflow-y: auto; /* Scroll if content overflows */
+            padding-right: 10px; /* Space for scrollbar */
+        }
+
+        .bolo-item {
+            background-color: #333;
+            border: 1px solid #555;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+
+        .bolo-id {
+            color: #ffc107;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .bolo-time {
+            color: #bbb;
+            font-size: 0.8em;
+        }
+
+        /* Event Details Panel */
+        .event-details-panel {
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+            background-color: #1e1e1e;
+            flex-grow: 1; /* Make it fill available space */
+        }
+
+        .detail-item {
+            margin-bottom: 10px;
+        }
+
+        .detail-label {
+            font-weight: bold;
+            color: #add8e6;
+            margin-right: 5px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.85em;
+            margin-left: 5px;
+        }
+
+        .status-badge.green { background-color: #28a745; color: white; }
+        .status-badge.blue { background-color: #007bff; color: white; }
+        .status-badge.red { background-color: #dc3545; color: white; }
+
+        .event-detail-notes, .event-detail-history {
+            background-color: #222;
+            border: 1px solid #444;
+            padding: 10px;
+            border-radius: 4px;
+            min-height: 50px;
+            max-height: 150px;
+            overflow-y: auto;
+            color: #ccc;
+        }
+        .event-detail-notes p, .event-detail-history p {
+            margin: 0; /* Remove default paragraph margin */
+        }
+
+        /* Custom Context Menu */
+        .custom-context-menu {
+            position: fixed;
+            background-color: #3a3a3a;
+            border: 1px solid #555;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 10;
+            padding: 5px 0;
+            min-width: 150px;
+        }
+
+        .custom-context-menu ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .custom-context-menu li {
+            padding: 8px 15px;
+            cursor: pointer;
+            color: #eee;
+        }
+
+        .custom-context-menu li:hover {
+            background-color: #007bff;
+            color: white;
+        }
+
+        /* Admin Panel */
+        .admin-panel-container {
+            background-color: #2a2a2a; /* Darker background for the panel */
+            border: 1px solid #444;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            overflow: hidden; /* Ensures content doesn't overflow rounded corners */
+        }
+
+        .admin-panel-header {
+            background-color: #333; /* Slightly lighter header */
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #444;
+        }
+
+        .admin-panel-header:hover {
+            background-color: #444;
+        }
+
+        .admin-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #eee;
+        }
+
+        .admin-toggle-icon {
+            font-size: 1.5em;
+            color: #bbb;
+            transition: transform 0.3s ease;
+        }
+
+        .admin-panel-header.active .admin-toggle-icon {
+            transform: rotate(180deg); /* Rotate up arrow when active */
+        }
+
+        .admin-panel-content {
+            padding: 20px;
+            border-top: none; /* No top border, it's covered by header border-bottom */
+            background-color: #1e1e1e; /* Even darker background for content */
+        }
+
+        .admin-section {
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed #333;
+        }
+
+        .admin-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .admin-section h4 {
+            color: #90ee90; /* Green for section titles */
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .admin-section h5 {
+            color: #add8e6; /* Light blue for sub-titles */
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .admin-panel-container .form-group {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .admin-panel-container .form-group label {
+            color: #bbb;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .admin-panel-container .form-group input[type="text"],
+        .admin-panel-container .form-group input[type="password"] {
+            background-color: #333;
+            border: 1px solid #555;
+            color: #eee;
+            padding: 8px 10px;
+            border-radius: 4px;
+            font-size: 0.95em;
+        }
+
+        .admin-panel-container .form-group input[type="text"]::placeholder,
+        .admin-panel-container .form-group input[type="password"]::placeholder {
+            color: #888;
+        }
+
+        .admin-panel-container .btn {
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-right: 10px; /* Space between buttons */
+            margin-top: 10px; /* Space above buttons */
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .admin-panel-container .btn-primary {
+            background-color: #007bff;
+            color: white;
+            border: 1px solid #007bff;
+        }
+
+        .admin-panel-container .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+
+        .admin-panel-container .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+            border: 1px solid #6c757d;
+        }
+
+        .admin-panel-container .btn-secondary:hover {
+            background-color: #5a6268;
+            border-color: #545b62;
+        }
+
+        .admin-panel-container .btn-danger {
+            background-color: #dc3545;
+            color: white;
+            border: 1px solid #dc3545;
+        }
+
+        .admin-panel-container .btn-danger:hover {
+            background-color: #c82333;
+            border-color: #bd2130;
+        }
+
+        .admin-panel-container .list-group {
+            list-style: none;
+            padding: 0;
+            margin-top: 15px;
+        }
+
+        .admin-panel-container .list-group-item {
+            background-color: #282828;
+            border: 1px solid #444;
+            padding: 10px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            color: #eee;
+            font-size: 0.95em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .admin-panel-container .list-group-item.selected-user {
+            background-color: #0056b3; /* Highlight selected user */
+            border-color: #007bff;
+        }
+
+        .admin-panel-container .message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: white; /* Default white for messages */
+        }
+
+        .admin-panel-container .message.success {
+            background-color: #28a745; /* Green for success */
+        }
+
+        .admin-panel-container .message.error {
+            background-color: #dc3545; /* Red for error */
+        }
+
+        .admin-panel-container .user-item-actions button {
+            background: none;
+            border: none;
+            color: #bbb;
+            font-size: 0.9em;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .admin-panel-container .user-item-actions button:hover {
+            text-decoration: underline;
+            color: #eee;
+        }
+
+    </style>
 </head>
 <body>
-  <header>Orlando Police Department</header>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
 
-  <div id="loginSection">
-    <input type="text" id="username" class="form-input" placeholder="Username" />
-    <input type="password" id="password" class="form-input" placeholder="Password" />
-    <button class="button" onclick="login()">Login</button>
-  </div>
-
-  <div id="mainSection" class="hidden">
-    <button class="button" onclick="logout()">Logout</button>
-    <button class="button" onclick="toggleApplications()">View Application Responses</button>
-
-    <div id="applicationsView" class="hidden">
-      <button class="button full-rounded" onclick="showResponses()">New Application Responses</button>
-      <div id="responses"></div>
-      <div style="display: flex; gap: 20px; margin-top: 20px;">
-        <div class="green full-rounded" style="padding: 20px; text-align: center;">
-          <div>Accepted</div>
-          <div id="acceptedCount">0</div>
+    <div class="login-container" id="loginContainer">
+        <div class="login-box">
+            <h2>Broward County Dispatch Login</h2>
+            <div class="input-group">
+                <label for="usernameInput">Username:</label>
+                <input type="text" id="usernameInput" placeholder="Enter username">
+            </div>
+            <div class="input-group">
+                <label for="passwordInput">Password:</label>
+                <input type="password" id="passwordInput" placeholder="Enter password">
+            </div>
+            <button id="loginButton">Login</button>
+            <p id="loginMessage" class="login-message"></p>
         </div>
-        <div class="red full-rounded" style="padding: 20px; text-align: center;">
-          <div>Denied</div>
-          <div id="deniedCount">0</div>
+    </div>
+
+    <div class="dashboard-container" id="dashboardContainer">
+        <header>
+            <div class="top-left-logo" id="topLeftLogo">
+                <img src="https://media.discordapp.net/attachments/1228141326965411920/1320980715629711381/ca7eeba99227fd35efd8e37416a1680b_1.png?ex=686a0429&is=6868b2a9&hm=a644780f197b87d7320940160a38906b078dc77a8e90b29ecd40a9fea18686c0c&=&format=webp&quality=lossless" alt="Broward County Logo">
+            </div>
+            <div class="top-right-info" id="topRightInfo">
+                <span class="location-time" id="locationTime"></span>
+                <span class="user-status">User: **C-100** | Status: **On Duty**</span>
+                <button id="logoutButton">Logout</button>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="admin-panel-container">
+                    <div class="admin-panel-header" id="adminPanelHeader">
+                        <span class="admin-title">Admin Panel</span>
+                        <span class="admin-toggle-icon">&#9660;</span> </div>
+                    <div class="admin-panel-content" id="adminPanelContent" style="display: none;">
+                        <div class="admin-section">
+                            <h4>Manage User Accounts</h4>
+                            <div class="form-group">
+                                <label for="newAdminUsername">New Username:</label>
+                                <input type="text" id="newAdminUsername" placeholder="Enter new username">
+                            </div>
+                            <div class="form-group">
+                                <label for="newAdminPassword">New Password:</label>
+                                <input type="password" id="newAdminPassword" placeholder="Enter new password">
+                            </div>
+                            <button id="addAdminUserBtn" class="btn btn-primary">Add User</button>
+                            <button id="updateAdminUserBtn" class="btn btn-secondary">Update User</button>
+                            <button id="removeAdminUserBtn" class="btn btn-danger">Remove User</button>
+                            <div id="adminUserMessage" class="message"></div>
+                            
+                            <h5>Existing Users:</h5>
+                            <ul id="adminUsersList" class="list-group">
+                                </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>New Call Entry</h3>
+                <div class="form-group">
+                    <label for="newCallType">Call Type:</label>
+                    <input type="text" id="newCallType" placeholder="e.g., Assault, Traffic Stop">
+                </div>
+                <div class="form-group">
+                    <label for="newCallAddress">Address:</label>
+                    <input type="text" id="newCallAddress" placeholder="e.g., 123 Main St, Fort Lauderdale FL">
+                </div>
+                <div class="form-group">
+                    <label for="newCallDetails">Details:</label>
+                    <textarea id="newCallDetails" placeholder="Brief description of the incident..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="newCallPriority">Priority:</label>
+                    <select id="newCallPriority">
+                        <option value="LOW">LOW</option>
+                        <option value="MEDIUM">MEDIUM</option>
+                        <option value="HIGH">HIGH</option>
+                        <option value="CRITICAL">CRITICAL</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="newCallAssignedUnit">Assigned Unit(s):</label>
+                    <input type="text" id="newCallAssignedUnit" placeholder="e.g., 201, 205 (comma separated)">
+                </div>
+                <div class="form-actions">
+                    <button id="submitNewCallBtn" class="btn btn-primary">Submit Call</button>
+                    <button id="clearNewCallFormBtn" class="btn btn-secondary">Clear Form</button>
+                </div>
+            </div>
+
+            <div class="center-panel">
+                <h3>Active Calls (<span id="activeCallsCount">0</span>)</h3>
+                <div style="overflow-x: auto; max-height: 400px;">
+                    <table class="active-calls-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Type</th>
+                                <th>Priority</th>
+                                <th>Address</th>
+                                <th>Details</th>
+                                <th>Time</th>
+                                <th>Unit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activeCallsTableBody">
+                            </tbody>
+                    </table>
+                </div>
+
+                <h3 style="margin-top: 30px;">Active Units</h3>
+                <div class="active-units-list" id="activeUnitsList">
+                    </div>
+
+                <h3 style="margin-top: 30px;">Update Unit Status</h3>
+                <div class="form-group">
+                    <label for="unitCallsignInput">Unit Callsign:</label>
+                    <input type="text" id="unitCallsignInput" placeholder="e.g., 201">
+                </div>
+                <div class="form-group">
+                    <label for="unitStatusSelect">Status:</label>
+                    <select id="unitStatusSelect">
+                        <option value="Available">Available</option>
+                        <option value="On Scene">On Scene</option>
+                        <option value="En Route">En Route</option>
+                        <option value="Busy">Busy</option>
+                        <option value="Out of Service">Out of Service</option>
+                    </select>
+                </div>
+                <button id="updateUnitStatusBtn" class="btn btn-primary">Update Status</button>
+            </div>
+
+            <div class="right-panel">
+                <h3>New BOLO (<span id="activeBolosCount">0</span>)</h3>
+                <div class="form-group">
+                    <label for="boloUnitCallsignInput">Unit/BOLO ID:</label>
+                    <input type="text" id="boloUnitCallsignInput" placeholder="e.g., Vehicle: ABC123, Person: John Doe">
+                </div>
+                <div class="form-group">
+                    <label for="boloDescriptionTextarea">Description:</label>
+                    <textarea id="boloDescriptionTextarea" placeholder="Detailed description of BOLO..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button id="submitNewBoloBtn" class="btn btn-primary">Submit BOLO</button>
+                    <button id="clearNewBoloFormBtn" class="btn btn-secondary">Clear Form</button>
+                </div>
+
+                <h3 style="margin-top: 30px;">Active BOLOs</h3>
+                <div class="active-bolos-list" id="activeBolosList">
+                    </div>
+
+                <h3 style="margin-top: 30px;">Event Details: <span id="eventDetailHeader">#SELECT CALL</span></h3>
+                <div class="event-details-panel">
+                    <div class="detail-item"><span class="detail-label">Type:</span> <span id="eventDetailType">N/A</span></div>
+                    <div class="detail-item"><span class="detail-label">Location:</span> <span id="eventDetailLocation">N/A</span></div>
+                    <div class="detail-item">
+                        <span class="detail-label">Status:</span>
+                        <span id="eventDetailStatus" class="status-badge">N/A</span>
+                    </div>
+                    <div class="detail-item"><span class="detail-label">Assigned Unit(s):</span> <span id="eventDetailAssignedUnits">N/A</span></div>
+                    <div class="detail-item"><span class="detail-label">Dispatched Time:</span> <span id="eventDetailDispatchedTime">N/A</span></div>
+                    <div class="detail-item"><span class="detail-label">Caller:</span> <span id="eventDetailCaller">N/A</span></div>
+                    <div class="detail-item">
+                        <span class="detail-label">Notes:</span>
+                        <div class="event-detail-notes" id="eventDetailNotes"></div>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">History:</span>
+                        <div class="event-detail-history" id="eventDetailHistory"></div>
+                    </div>
+                </div>
+                <button id="clearAllButton" class="clear-all-button">Clear All Logs & Data</button>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
 
-  <div class="section">
-    <div class="blue full-rounded" style="padding: 20px;">
-      <h3>Orlando Police Department Cadet Application</h3>
-      <p>This department portal serves the city and protects the civilians.</p>
+    <div class="custom-context-menu" id="customContextMenu">
+        <ul>
+            <li id="removeActiveCallMenuItem">Remove Call</li>
+            </ul>
     </div>
-    <form id="cadetForm">
-      <input class="form-input" name="discord" placeholder="Discord Username" />
-      <input class="form-input" name="roblox" placeholder="Roblox Username" />
-      <input class="form-input" name="age" placeholder="How old are you?" />
-      <input class="form-input" name="activity" placeholder="How active are you?" />
-      <input class="form-input" name="reason" placeholder="Why do you want to join?" />
-      <input class="form-input" name="10-8" placeholder="What is 10-8?" />
-      <input class="form-input" name="10-20" placeholder="What is 10-20?" />
-      <input class="form-input" name="10-41" placeholder="What is 10-41?" />
-      <input class="form-input" name="10-42" placeholder="What is 10-42?" />
-      <label><input type="checkbox" name="understand_accept" /> Do you understand that if you ask for your application to be accepted you will be denied?</label><br>
-      <label><input type="checkbox" name="understand_training" /> Do you understand that if you don't do your training you will be terminated?</label><br>
-      <button type="submit" class="button">Submit</button>
-    </form>
-  </div>
 
-  <div class="section">
-    <div class="blue full-rounded" style="padding: 20px;">
-      <h3>Orlando Police Department FTO Division</h3>
-      <p>This department portal serves the city and protects the civilians.</p>
-    </div>
-    <form id="ftoForm">
-      <input class="form-input" name="discord" placeholder="Discord Username" />
-      <input class="form-input" name="roblox" placeholder="Roblox Username" />
-      <input class="form-input" name="age" placeholder="How old are you?" />
-      <input class="form-input" name="activity" placeholder="How active are you?" />
-      <input class="form-input" name="reason" placeholder="Why do you want to join?" />
-      <input class="form-input" name="10-8" placeholder="What is 10-8?" />
-      <input class="form-input" name="10-20" placeholder="What is 10-20?" />
-      <input class="form-input" name="10-41" placeholder="What is 10-41?" />
-      <input class="form-input" name="10-42" placeholder="What is 10-42?" />
-      <label><input type="checkbox" name="understand_accept" /> Do you understand that if you ask for your application to be accepted you will be denied?</label><br>
-      <label><input type="checkbox" name="understand_training" /> Do you understand that if you don't do your training you will be terminated?</label><br>
-      <button type="submit" class="button">Submit</button>
-    </form>
-  </div>
+    <script>
+        // DOM Elements - Get references once the DOM is loaded
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loginContainer = document.getElementById('loginContainer');
+        const dashboardContainer = document.getElementById('dashboardContainer');
+        const usernameInput = document.getElementById('usernameInput');
+        const passwordInput = document.getElementById('passwordInput');
+        const loginButton = document.getElementById('loginButton');
+        const loginMessage = document.getElementById('loginMessage');
+        const logoutButton = document.getElementById('logoutButton');
 
-  <script>
-    let acceptedCount = 0;
-    let deniedCount = 0;
-    const applications = [];
+        const topLeftLogo = document.getElementById('topLeftLogo');
+        const topRightInfo = document.getElementById('topRightInfo');
+        const locationTime = document.getElementById('locationTime');
 
-    function login() {
-      document.getElementById('loginSection').classList.add('hidden');
-      document.getElementById('mainSection').classList.remove('hidden');
-    }
+        const newCallType = document.getElementById('newCallType');
+        const newCallAddress = document.getElementById('newCallAddress');
+        const newCallDetails = document.getElementById('newCallDetails');
+        const newCallPriority = document.getElementById('newCallPriority');
+        const newCallAssignedUnit = document.getElementById('newCallAssignedUnit');
+        const submitNewCallBtn = document.getElementById('submitNewCallBtn');
+        const clearNewCallFormBtn = document.getElementById('clearNewCallFormBtn');
 
-    function logout() {
-      document.getElementById('mainSection').classList.add('hidden');
-      document.getElementById('loginSection').classList.remove('hidden');
-    }
+        const activeCallsCount = document.getElementById('activeCallsCount');
+        const activeCallsTableBody = document.getElementById('activeCallsTableBody');
 
-    function toggleApplications() {
-      document.getElementById('applicationsView').classList.toggle('hidden');
-    }
+        const activeUnitsList = document.getElementById('activeUnitsList');
+        const unitCallsignInput = document.getElementById('unitCallsignInput');
+        const unitStatusSelect = document.getElementById('unitStatusSelect');
+        const updateUnitStatusBtn = document.getElementById('updateUnitStatusBtn');
 
-    function showResponses() {
-      const container = document.getElementById('responses');
-      container.innerHTML = '';
-      applications.forEach((app, i) => {
-        if (app.status === 'pending') {
-          const div = document.createElement('div');
-          div.innerHTML = `<pre>${JSON.stringify(app, null, 2)}</pre>` +
-            `<button onclick="accept(${i})">Accept</button>` +
-            `<button onclick="deny(${i})">Deny</button>`;
-          container.appendChild(div);
+        const activeBolosCount = document.getElementById('activeBolosCount');
+        const boloUnitCallsignInput = document.getElementById('boloUnitCallsignInput');
+        const boloDescriptionTextarea = document.getElementById('boloDescriptionTextarea');
+        const submitNewBoloBtn = document.getElementById('submitNewBoloBtn');
+        const clearNewBoloFormBtn = document.getElementById('clearNewBoloFormBtn');
+        const activeBolosList = document.getElementById('activeBolosList');
+
+        const eventDetailHeader = document.getElementById('eventDetailHeader');
+        const eventDetailType = document.getElementById('eventDetailType');
+        const eventDetailLocation = document.getElementById('eventDetailLocation');
+        const eventDetailStatus = document.getElementById('eventDetailStatus');
+        const eventDetailAssignedUnits = document.getElementById('eventDetailAssignedUnits');
+        const eventDetailDispatchedTime = document.getElementById('eventDetailDispatchedTime');
+        const eventDetailCaller = document.getElementById('eventDetailCaller');
+        const eventDetailNotes = document.getElementById('eventDetailNotes');
+        const eventDetailHistory = document.getElementById('eventDetailHistory');
+
+        const customContextMenu = document.getElementById('customContextMenu');
+        const removeActiveCallMenuItem = document.getElementById('removeActiveCallMenuItem');
+        let rightClickedRow = null; // To store the row that was right-clicked
+
+        const clearAllButton = document.getElementById('clearAllButton');
+
+        // Admin Panel Constants
+        const ADMIN_PANEL_CODE = "ABC 123"; // The code to access the admin panel
+
+        // DOM Elements for Admin Panel
+        const adminPanelHeader = document.getElementById('adminPanelHeader');
+        const adminPanelContent = document.getElementById('adminPanelContent');
+        const newAdminUsernameInput = document.getElementById('newAdminUsername');
+        const newAdminPasswordInput = document.getElementById('newAdminPassword');
+        const addAdminUserBtn = document.getElementById('addAdminUserBtn');
+        const updateAdminUserBtn = document.getElementById('updateAdminUserBtn');
+        const removeAdminUserBtn = document.getElementById('removeAdminUserBtn');
+        const adminUserMessage = document.getElementById('adminUserMessage');
+        const adminUsersList = document.getElementById('adminUsersList');
+
+        // Global data arrays and counters
+        let activeCallsData = [];
+        let activeUnitsData = [];
+        let activeBolosData = [];
+        let callCounter = 0;
+        let boloCounter = 0;
+
+        // Global variable for storing user accounts (replace VALID_USERNAME/PASSWORD)
+        let userAccounts = [
+            { username: "C-100", password: "1234321" } // Updated default user here
+        ];
+
+        // Variable to hold the currently selected user in the admin panel
+        let selectedAdminUser = null;
+
+
+        // --- Utility Functions ---
+        function updateLocationTime() {
+            const now = new Date();
+            // Format time as HH:MM:SS
+            const timeString = now.toLocaleTimeString('en-US', { hour12: false });
+            // Get the current date in a readable format
+            const dateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            // Updated location to Broward County, FL
+            locationTime.textContent = `Broward County, FL | ${timeString} | ${dateString}`;
         }
-      });
-    }
+        // Update time every second
+        setInterval(updateLocationTime, 1000);
+        // Initial call to display time immediately
+        updateLocationTime();
 
-    function accept(i) {
-      applications[i].status = 'accepted';
-      acceptedCount++;
-      document.getElementById('acceptedCount').innerText = acceptedCount;
-      showResponses();
-    }
+        function updateActiveCallsCount() {
+            activeCallsCount.textContent = activeCallsData.length;
+        }
 
-    function deny(i) {
-      applications[i].status = 'denied';
-      deniedCount++;
-      document.getElementById('deniedCount').innerText = deniedCount;
-      showResponses();
-    }
+        function updateActiveBolosCount() {
+            activeBolosCount.textContent = activeBolosData.length;
+        }
 
-    function handleFormSubmit(e, type) {
-      e.preventDefault();
-      const form = e.target;
-      const data = new FormData(form);
-      const entry = Object.fromEntries(data.entries());
-      entry.status = 'pending';
-      entry.type = type;
-      applications.push(entry);
-      form.reset();
-      alert('Application submitted!');
-    }
+        function clearEventDetailsPanel() {
+            eventDetailHeader.textContent = '#SELECT CALL';
+            eventDetailType.textContent = 'N/A';
+            eventDetailLocation.textContent = 'N/A';
+            eventDetailStatus.textContent = 'N/A';
+            eventDetailStatus.className = 'status-badge'; // Reset class
+            eventDetailAssignedUnits.innerHTML = 'N/A';
+            eventDetailDispatchedTime.textContent = 'N/A';
+            eventDetailCaller.textContent = 'N/A';
+            eventDetailNotes.textContent = '';
+            eventDetailHistory.innerHTML = '';
+            // Remove active class from any previously selected row
+            activeCallsTableBody.querySelectorAll('tr').forEach(r => r.classList.remove('active-row'));
+        }
 
-    document.getElementById('cadetForm').addEventListener('submit', (e) => handleFormSubmit(e, 'Cadet'));
-    document.getElementById('ftoForm').addEventListener('submit', (e) => handleFormSubmit(e, 'FTO'));
-  </script>
+        // --- Data Persistence (localStorage) ---
+        function saveAllData() {
+            localStorage.setItem('activeCallsData', JSON.stringify(activeCallsData));
+            localStorage.setItem('activeUnitsData', JSON.stringify(activeUnitsData));
+            localStorage.setItem('activeBolosData', JSON.stringify(activeBolosData));
+            localStorage.setItem('callCounter', callCounter);
+            localStorage.setItem('boloCounter', boloCounter);
+            localStorage.setItem('userAccounts', JSON.stringify(userAccounts)); // Save user accounts
+            console.log("Data saved to localStorage.");
+        }
+
+        function loadAllData() {
+            // Calls
+            const storedCalls = localStorage.getItem('activeCallsData');
+            if (storedCalls) {
+                activeCallsData = JSON.parse(storedCalls);
+                activeCallsTableBody.innerHTML = ''; // Clear current display
+                activeCallsData.forEach(call => addCallToTable(call, false)); // Re-add to DOM, don't save again
+            }
+
+            // Units
+            const storedUnits = localStorage.getItem('activeUnitsData');
+            if (storedUnits) {
+                activeUnitsData = JSON.parse(storedUnits);
+                activeUnitsList.innerHTML = ''; // Clear current display
+                activeUnitsData.forEach(unit => addUnitToDisplay(unit, false)); // Re-add to DOM, don't save again
+            }
+
+            // BOLOs
+            const storedBolos = localStorage.getItem('activeBolosData');
+            if (storedBolos) {
+                activeBolosData = JSON.parse(storedBolos);
+                activeBolosList.innerHTML = ''; // Clear current display
+                activeBolosData.forEach(bolo => addBoloToDisplay(bolo, false)); // Re-add to DOM, don't save again
+            }
+
+            // Counters
+            callCounter = parseInt(localStorage.getItem('callCounter') || '0');
+            boloCounter = parseInt(localStorage.getItem('boloCounter') || '0');
+
+            // User Accounts
+            const storedUserAccounts = localStorage.getItem('userAccounts');
+            if (storedUserAccounts) {
+                userAccounts = JSON.parse(storedUserAccounts);
+                displayAdminUsers(); // Display users after loading
+            } else {
+                // If no user accounts are stored, use the initial default one and save it
+                saveAllData(); 
+            }
+
+            updateActiveCallsCount();
+            updateActiveBolosCount();
+            console.log("Data loaded from localStorage.");
+        }
+
+        // --- Functions to add/update items in DOM and data arrays ---
+
+        function addCallToTable(call, save = true) {
+            const newRow = document.createElement('tr');
+            newRow.setAttribute('data-call-id', call.id); // Store ID for easy lookup
+            newRow.innerHTML = `
+                <td>${call.id}</td>
+                <td>${call.type}</td>
+                <td>${call.priority}</td>
+                <td>${call.address}</td>
+                <td>${call.details}</td>
+                <td>${call.time}</td>
+                <td>${call.assignedUnit}</td>
+            `;
+            activeCallsTableBody.prepend(newRow); // Add to the top of the list
+            
+            if (save) {
+                activeCallsData.unshift(call); // Add to data array
+                saveAllData();
+            }
+            updateActiveCallsCount();
+        }
+
+        function addUnitToDisplay(unit, save = true) {
+            let unitFound = false;
+            activeUnitsList.querySelectorAll('.unit-item').forEach(item => {
+                if (item.dataset.callsign === unit.callsign) {
+                    item.innerHTML = `<span class="unit-id">${unit.callsign}</span> / ${unit.status}`;
+                    unitFound = true;
+                }
+            });
+
+            if (!unitFound) {
+                const newUnitItem = document.createElement('div');
+                newUnitItem.classList.add('unit-item');
+                newUnitItem.dataset.callsign = unit.callsign; 
+                newUnitItem.innerHTML = `<span class="unit-id">${unit.callsign}</span> / ${unit.status}`;
+                activeUnitsList.prepend(newUnitItem); 
+            }
+
+            if (save) {
+                // Update or add unit in activeUnitsData
+                const existingUnitIndex = activeUnitsData.findIndex(u => u.callsign === unit.callsign);
+                if (existingUnitIndex > -1) {
+                    activeUnitsData[existingUnitIndex] = unit;
+                } else {
+                    activeUnitsData.unshift(unit); // Add new unit to the top
+                }
+                saveAllData();
+            }
+        }
+
+        function addBoloToDisplay(bolo, save = true) {
+            const newBoloItem = document.createElement('div');
+            newBoloItem.classList.add('bolo-item');
+            newBoloItem.setAttribute('data-bolo-id', bolo.id); // Store ID
+            newBoloItem.innerHTML = `
+                <span class="bolo-id">${bolo.id} (${bolo.unitId})</span>
+                <span class="bolo-time">${bolo.time}</span><br>
+                ${bolo.description}
+            `;
+            activeBolosList.prepend(newBoloItem); 
+
+            if (save) {
+                activeBolosData.unshift(bolo); 
+                saveAllData();
+            }
+            updateActiveBolosCount(); 
+        }
+
+        // --- Admin Panel Functions ---
+
+        function displayAdminUsers() {
+            adminUsersList.innerHTML = ''; // Clear current list
+            userAccounts.forEach(user => {
+                const listItem = document.createElement('li');
+                listItem.classList.add('list-group-item');
+                listItem.setAttribute('data-username', user.username);
+                listItem.innerHTML = `
+                    <span>${user.username}</span>
+                    <div class="user-item-actions">
+                        <button class="select-user-btn" data-username="${user.username}">Select</button>
+                    </div>
+                `;
+                adminUsersList.appendChild(listItem);
+            });
+        }
+
+        function showAdminMessage(message, type = 'info') {
+            adminUserMessage.textContent = message;
+            adminUserMessage.className = 'message'; // Reset classes
+            adminUserMessage.classList.add(type); // Add success or error
+            setTimeout(() => {
+                adminUserMessage.textContent = '';
+                adminUserMessage.className = 'message';
+            }, 3000); // Message disappears after 3 seconds
+        }
+
+        // Function to handle adding/updating/removing users
+        function handleUserAction(actionType) {
+            const username = newAdminUsernameInput.value.trim();
+            const password = newAdminPasswordInput.value.trim();
+
+            if (actionType !== 'remove' && (!username || !password)) {
+                showAdminMessage('Username and password are required.', 'error');
+                return;
+            }
+            
+            if (actionType === 'add') {
+                const existingUser = userAccounts.find(u => u.username === username);
+                if (existingUser) {
+                    showAdminMessage('Username already exists.', 'error');
+                    return;
+                }
+                userAccounts.push({ username, password });
+                showAdminMessage('User added successfully!', 'success');
+            } else if (actionType === 'update') {
+                if (!selectedAdminUser) {
+                    showAdminMessage('Please select a user to update.', 'error');
+                    return;
+                }
+                const userIndex = userAccounts.findIndex(u => u.username === selectedAdminUser.username);
+                if (userIndex > -1) {
+                    userAccounts[userIndex] = { username: username, password: password };
+                    showAdminMessage('User updated successfully!', 'success');
+                    selectedAdminUser = null; // Deselect after update
+                } else {
+                    showAdminMessage('Selected user not found.', 'error');
+                }
+            } else if (actionType === 'remove') {
+                if (!selectedAdminUser) {
+                    showAdminMessage('Please select a user to remove.', 'error');
+                    return;
+                }
+                if (userAccounts.length === 1) {
+                    showAdminMessage('Cannot remove the last user account.', 'error');
+                    return;
+                }
+                userAccounts = userAccounts.filter(u => u.username !== selectedAdminUser.username);
+                showAdminMessage('User removed successfully!', 'success');
+                selectedAdminUser = null; // Deselect after removal
+            }
+
+            saveAllData(); // Save changes to localStorage
+            displayAdminUsers(); // Refresh the list
+            newAdminUsernameInput.value = '';
+            newAdminPasswordInput.value = '';
+            adminUsersList.querySelectorAll('.list-group-item').forEach(item => item.classList.remove('selected-user'));
+        }
+
+
+        // --- Event Listeners for Forms and Buttons ---
+
+        submitNewCallBtn.addEventListener('click', () => {
+            const type = newCallType.value;
+            const address = newCallAddress.value;
+            const details = newCallDetails.value;
+            const priority = newCallPriority.value;
+            const assignedUnit = newCallAssignedUnit.value;
+
+            if (!type || !address || !details || !priority || !assignedUnit) {
+                alert('Please fill in all "New Call" fields.');
+                return;
+            }
+
+            callCounter++;
+            const callId = `V${callCounter}`;
+            const currentTime = new Date().toLocaleTimeString('en-US', { hour12: false });
+
+            const newCall = {
+                id: callId,
+                type: type,
+                address: address,
+                details: details,
+                priority: priority,
+                assignedUnit: assignedUnit,
+                time: currentTime
+            };
+            addCallToTable(newCall); // Adds to DOM and data array, saves
+
+            newCallType.value = '';
+            newCallAddress.value = '';
+            newCallDetails.value = '';
+            newCallPriority.value = 'LOW'; 
+            newCallAssignedUnit.value = '';
+
+            console.log('New Call Submitted:', newCall);
+        });
+
+        clearNewCallFormBtn.addEventListener('click', () => {
+            newCallType.value = '';
+            newCallAddress.value = '';
+            newCallDetails.value = '';
+            newCallPriority.value = 'LOW';
+            newCallAssignedUnit.value = '';
+        });
+
+        updateUnitStatusBtn.addEventListener('click', () => {
+            const callsign = unitCallsignInput.value.trim().toUpperCase(); 
+            const status = unitStatusSelect.value;
+
+            if (!callsign || !status) {
+                alert('Please enter a Unit Callsign and select a Status.');
+                return;
+            }
+
+            const unit = { callsign: callsign, status: status };
+            addUnitToDisplay(unit); // Adds/updates in DOM and data array, saves
+
+            unitCallsignInput.value = '';
+            unitStatusSelect.value = '';
+
+            console.log(`Unit Status Updated: ${callsign} to ${status}`);
+        });
+
+        submitNewBoloBtn.addEventListener('click', () => {
+            const boloUnitId = boloUnitCallsignInput.value.trim().toUpperCase();
+            const boloDescription = boloDescriptionTextarea.value.trim();
+
+            if (!boloUnitId || !boloDescription) {
+                alert('Please fill in both "Unit/BOLO ID" and "Description" for the New BOLO.');
+                return;
+            }
+
+            boloCounter++;
+            const boloId = `BOLO-${boloCounter}`;
+            const currentTime = new Date().toLocaleTimeString('en-US', { hour12: false });
+
+            const newBolo = {
+                id: boloId,
+                unitId: boloUnitId,
+                description: boloDescription,
+                time: currentTime
+            };
+            addBoloToDisplay(newBolo); // Adds to DOM and data array, saves
+
+            boloUnitCallsignInput.value = '';
+            boloDescriptionTextarea.value = '';
+
+            console.log('New BOLO Submitted:', newBolo);
+        });
+
+        clearNewBoloFormBtn.addEventListener('click', () => {
+            boloUnitCallsignInput.value = '';
+            boloDescriptionTextarea.value = '';
+        });
+
+
+        // --- Event Listener for Active Calls table to show details (Left Click) ---
+        activeCallsTableBody.addEventListener('click', (event) => {
+            let row = event.target.closest('tr');
+            if (row) {
+                // Remove active class from all rows
+                activeCallsTableBody.querySelectorAll('tr').forEach(r => r.classList.remove('active-row'));
+                // Add active class to the clicked row
+                row.classList.add('active-row');
+
+                const callId = row.getAttribute('data-call-id');
+                const call = activeCallsData.find(c => c.id === callId);
+
+                if (call) {
+                    eventDetailHeader.textContent = `EVENT #${call.id}`;
+                    eventDetailType.textContent = call.type;
+                    eventDetailLocation.textContent = call.address;
+                    
+                    eventDetailStatus.textContent = call.priority;
+                    eventDetailStatus.className = 'status-badge';
+                    if (call.priority.toUpperCase() === 'HIGH' || call.priority.toUpperCase() === 'CRITICAL') {
+                        eventDetailStatus.classList.add('red');
+                    } else if (call.priority.toUpperCase() === 'MEDIUM') {
+                        eventDetailStatus.classList.add('blue');
+                    } else {
+                        eventDetailStatus.classList.add('green');
+                    }
+
+                    eventDetailAssignedUnits.innerHTML = `${call.assignedUnit} <span class="text-muted">(assigned)</span>`;
+                    eventDetailDispatchedTime.textContent = call.time;
+                    eventDetailNotes.textContent = call.details;
+                    eventDetailCaller.textContent = 'N/A (from log entry)';
+                    eventDetailHistory.innerHTML = `<p>${call.time} - Call created by dispatcher</p>`;
+                }
+            }
+        });
+
+        // --- Custom Context Menu Logic for Active Calls (Right Click) ---
+        activeCallsTableBody.addEventListener('contextmenu', (event) => {
+            const row = event.target.closest('tr'); 
+            if (row) {
+                event.preventDefault(); 
+                rightClickedRow = row; 
+
+                customContextMenu.style.left = `${event.clientX}px`;
+                customContextMenu.style.top = `${event.clientY}px`;
+                customContextMenu.style.display = 'block'; 
+
+                activeCallsTableBody.querySelectorAll('tr').forEach(r => r.classList.remove('active-row'));
+                row.classList.add('active-row');
+            } else {
+                customContextMenu.style.display = 'none';
+            }
+        });
+
+        document.addEventListener('click', (event) => {
+            if (customContextMenu.style.display === 'block' && !customContextMenu.contains(event.target)) {
+                customContextMenu.style.display = 'none';
+            }
+        });
+
+        removeActiveCallMenuItem.addEventListener('click', () => {
+            if (rightClickedRow) {
+                const callIdToDelete = rightClickedRow.getAttribute('data-call-id');
+                
+                // Remove from data array
+                activeCallsData = activeCallsData.filter(call => call.id !== callIdToDelete);
+                saveAllData();
+
+                // Clear details if the deleted call was displayed
+                if (rightClickedRow.classList.contains('active-row')) {
+                    clearEventDetailsPanel();
+                }
+                rightClickedRow.remove(); 
+                updateActiveCallsCount(); 
+                rightClickedRow = null; 
+            }
+            customContextMenu.style.display = 'none'; 
+        });
+
+        // --- Clear All Logs Functionality ---
+        clearAllButton.addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear all active calls, units, and BOLOs? This action cannot be undone.')) {
+                clearAllLogs(false); // Pass false to remain logged in after clearing data
+            }
+        });
+
+        function clearAllLogs(shouldClearLogin = false) { // Added parameter
+            // Clear data arrays
+            activeCallsData = [];
+            activeUnitsData = [];
+            activeBolosData = [];
+
+            // Clear DOM elements
+            activeCallsTableBody.innerHTML = '';
+            activeUnitsList.innerHTML = '';
+            activeBolosList.innerHTML = '';
+
+            // Reset counters
+            callCounter = 0;
+            boloCounter = 0;
+
+            // Clear localStorage, but conditionally keep 'isLoggedIn' and 'userAccounts'
+            const isLoggedInStatus = localStorage.getItem('isLoggedIn');
+            const currentUserAccounts = localStorage.getItem('userAccounts'); // Temporarily store user accounts
+            localStorage.clear();
+
+            if (!shouldClearLogin && isLoggedInStatus) { // If we shouldn't clear login, restore it
+                localStorage.setItem('isLoggedIn', isLoggedInStatus);
+            }
+            if (currentUserAccounts) { // Always restore user accounts if they exist (unless explicitly logging out)
+                localStorage.setItem('userAccounts', currentUserAccounts);
+            } else { // If userAccounts were cleared or never existed, re-initialize with default
+                userAccounts = [{ username: "C-100", password: "1234321" }]; // Default user re-applied if cleared
+                localStorage.setItem('userAccounts', JSON.stringify(userAccounts));
+            }
+
+
+            // Update display counts
+            updateActiveCallsCount();
+            updateActiveBolosCount();
+
+            // Clear details panel
+            clearEventDetailsPanel();
+
+            // Clear form fields
+            newCallType.value = '';
+            newCallAddress.value = '';
+            newCallDetails.value = '';
+            newCallPriority.value = 'LOW';
+            newCallAssignedUnit.value = '';
+            unitCallsignInput.value = '';
+            unitStatusSelect.value = '';
+            boloUnitCallsignInput.value = '';
+            boloDescriptionTextarea.value = '';
+
+            console.log("All logs and data cleared.");
+            displayAdminUsers(); // Refresh admin user list in case something changed
+        }
+
+
+        // --- Login/Logout Functions ---
+
+        function showLogin() {
+            loginContainer.style.display = 'flex';
+            dashboardContainer.style.display = 'none';
+            // Explicitly remove fade-in class when showing login to reset
+            dashboardContainer.classList.remove('fade-in'); 
+            topLeftLogo.style.display = 'none';
+            topRightInfo.style.display = 'none';
+            loadingOverlay.classList.add('hidden'); // Ensure loading overlay is hidden for login
+            usernameInput.focus();
+        }
+
+        function showDashboard() {
+            loginContainer.style.display = 'none';
+            dashboardContainer.style.display = 'flex'; // Restore original display property
+            topLeftLogo.style.display = 'block'; // Restore original display property
+            topRightInfo.style.display = 'flex'; // Restore original display property
+            // We'll manage loadingOverlay in initializeDashboard
+        }
+
+        function performLogin() {
+            const enteredUsername = usernameInput.value;
+            const enteredPassword = passwordInput.value;
+
+            // Find the user in the userAccounts array
+            const user = userAccounts.find(u => u.username === enteredUsername && u.password === enteredPassword);
+
+            if (user) {
+                localStorage.setItem('isLoggedIn', 'true'); // Set a flag in local storage
+                loginMessage.textContent = '';
+                usernameInput.value = '';
+                passwordInput.value = '';
+                initializeDashboard(); // Load data and show dashboard
+            } else {
+                loginMessage.textContent = 'Invalid username or password.';
+            }
+        }
+
+        function performLogout() {
+            if (confirm('Are you sure you want to log out?')) {
+                localStorage.removeItem('isLoggedIn'); // Clear the login flag
+                clearAllLogs(true); // Clear all data and also the login status
+                showLogin(); // Go back to the login screen
+                console.log('User logged out.');
+            }
+        }
+
+        // --- Event Listeners for Login/Logout ---
+        loginButton.addEventListener('click', performLogin);
+
+        usernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                passwordInput.focus();
+            }
+        });
+
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performLogin();
+            }
+        });
+
+        // Add this check in case the button wasn't added in HTML (though it should be now)
+        if (logoutButton) {
+            logoutButton.addEventListener('click', performLogout);
+        }
+
+        // --- Event Listeners for Admin Panel ---
+
+        adminPanelHeader.addEventListener('click', () => {
+            // Prompt for the admin code before showing the panel content
+            const enteredCode = prompt("Enter Admin Code:");
+            if (enteredCode === ADMIN_PANEL_CODE) {
+                if (adminPanelContent.style.display === 'none') {
+                    adminPanelContent.style.display = 'block';
+                    adminPanelHeader.classList.add('active'); // For arrow rotation
+                    displayAdminUsers(); // Load users when panel opens
+                } else {
+                    adminPanelContent.style.display = 'none';
+                    adminPanelHeader.classList.remove('active');
+                    selectedAdminUser = null; // Clear selection when panel closes
+                    adminUsersList.querySelectorAll('.list-group-item').forEach(item => item.classList.remove('selected-user'));
+                }
+            } else if (enteredCode !== null) { // If user didn't cancel
+                alert("Incorrect Admin Code.");
+            }
+        });
+
+        addAdminUserBtn.addEventListener('click', () => handleUserAction('add'));
+        updateAdminUserBtn.addEventListener('click', () => handleUserAction('update'));
+        removeAdminUserBtn.addEventListener('click', () => handleUserAction('remove'));
+
+        adminUsersList.addEventListener('click', (event) => {
+            const listItem = event.target.closest('.list-group-item');
+            if (listItem) {
+                // Clear previous selection
+                adminUsersList.querySelectorAll('.list-group-item').forEach(item => item.classList.remove('selected-user'));
+                
+                // Select the new item
+                listItem.classList.add('selected-user');
+                
+                const usernameToSelect = listItem.getAttribute('data-username');
+                selectedAdminUser = userAccounts.find(u => u.username === usernameToSelect);
+                
+                if (selectedAdminUser) {
+                    newAdminUsernameInput.value = selectedAdminUser.username;
+                    newAdminPasswordInput.value = selectedAdminUser.password; // Pre-fill password (be aware of security for real apps)
+                }
+            }
+        });
+
+
+        // --- Initial setup on page load ---
+        function initializeDashboard() {
+            if (localStorage.getItem('isLoggedIn') === 'true') {
+                // Show loading overlay only if we're actually loading the dashboard
+                loadingOverlay.classList.remove('hidden');
+                showDashboard(); // Make dashboard visible
+
+                // Simulate loading time (e.g., fetching from a server or just processing local data)
+                setTimeout(() => {
+                    loadAllData(); // Load data from localStorage
+                    updateActiveCallsCount(); 
+                    updateActiveBolosCount(); 
+                    clearEventDetailsPanel(); 
+
+                    // Add fade-in class after content is loaded
+                    dashboardContainer.classList.add('fade-in'); 
+
+                    // Hide loading overlay after data is loaded and rendered
+                    loadingOverlay.classList.add('hidden');
+                }, 1000); // Hide after 1 second (adjust as needed)
+            } else {
+                // If not logged in, show the login screen
+                showLogin();
+            }
+        }
+
+        // Call initialization function on page load
+        initializeDashboard();
+    </script>
 </body>
 </html>
